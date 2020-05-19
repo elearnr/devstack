@@ -110,6 +110,9 @@ upgrade: ## Upgrade requirements with pip-tools
 	pip-compile --upgrade -o requirements/pip-tools.txt requirements/pip-tools.in
 	pip-compile --upgrade -o requirements/base.txt requirements/base.in
 
+dev.print-container.%: ## Get the ID of the running container for a given service. Run with ``make --silent`` for just ID.
+	@echo -n $$(docker-compose ps --quiet $*)
+
 dev.checkout: ## Check out "openedx-release/$OPENEDX_RELEASE" in each repo if set, "master" otherwise
 	./repo.sh checkout
 
@@ -319,7 +322,7 @@ lms-watcher-shell: ## Run a shell on the LMS watcher container
 	docker-compose exec lms_watcher env TERM=$(TERM) /edx/app/edxapp/devstack.sh open
 
 %-attach: ## Attach to the specified service container process to use the debugger & see logs.
-	docker-compose attach $*
+	docker attach "$$(make --silent dev.print-container.$*)"
 
 lms-restart: lms-restart-devserver
 
