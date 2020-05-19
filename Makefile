@@ -12,7 +12,7 @@
         dev.check dev.checkout dev.clone dev.clone.ssh dev.nfs.setup \
         devpi-password dev.provision dev.provision.analytics_pipeline \
         dev.provision.services dev.provision.xqueue dev.pull dev.repo.reset \
-        dev.reset dev.status dev.sync.daemon.start dev.sync.provision \
+        dev.reset dev.status dev.stop dev.sync.daemon.start dev.sync.provision \
         dev.sync.requirements dev.sync.up dev.up dev.up.all \
         dev.up.analytics_pipeline dev.up.watchers dev.up.with-programs \
         discovery-shell down e2e-shell e2e-tests ecommerce-shell \
@@ -25,6 +25,7 @@
         studio-update-db studio-watcher-shell update-db upgrade upgrade \
         validate validate-lms-volume vnc-passwords xqueue_consumer-restart \
         xqueue_consumer-shell xqueue-restart xqueue-shell
+
 
 # Include options (configurable through options.local.mk)
 include options.mk
@@ -203,17 +204,23 @@ dev.check.%:  # Run checks for a given service or set of services (separated by 
 provision: | dev.provision ## This command will be deprecated in a future release, use dev.provision
 	echo "\033[0;31mThis command will be deprecated in a future release, use dev.provision\033[0m"
 
-stop: ## Stop all services
+dev.stop: ## Stop all services.
 	(test -d .docker-sync && docker-sync stop) || true ## Ignore failure here
-	docker-compose stop
+	docker-compose $(DOCKER_COMPOSE_FILES) stop
 
-stop.watchers: ## Stop asset watchers
-	docker-compose $(DOCKER_COMPOSE_FILES) stop lms_watcher studio_watcher
+dev.stop.%: ## Stop specific services, separated by plus-signs.
+	docker-compose $(DOCKER_COMPOSE_FILES) stop $$(echo $* | tr + " ")
 
-stop.all: | stop.analytics_pipeline stop stop.watchers ## Stop all containers, including asset watchers
+stop: dev.stop
 
-stop.xqueue: ## Stop the XQueue and XQueue-Consumer containers
-	docker-compose $(DOCKER_COMPOSE_FILES) stop xqueue xqueue_consumer
+stop.watchers: dev.stop.lms_watcher+studio_watcher
+
+stop.all: dev.stop
+
+stop.xqueue: dev.stop.xqueue+xqueue_consumer
+
+dev.kill.%: ## Kill specific services, separated by plus-signs.
+	docker-compose $(DOCKER_COMPOSE_FILES) kill $$(echo $* | tr + " ")
 
 down: ## Remove all service containers and networks
 	(test -d .docker-sync && docker-sync clean) || true ## Ignore failure here
